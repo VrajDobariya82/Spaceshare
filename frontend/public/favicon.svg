@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+    <defs>
+        <linearGradient id="primary-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#2563EB" />
+            <stop offset="100%" stop-color="#60A5FA" />
+        </linearGradient>
+    </defs>
+    <rect width="120" height="120" rx="28" fill="url(#primary-grad)" />
+    <!-- Overlapping stylized S for SpaceShare -->
+    <path d="M35 75 Q35 85 45 85 L75 85 Q85 85 85 75 L85 65 Q85 55 75 55 L45 55 Q35 55 35 45 L35 35 Q35 25 45 25 L75 25" fill="none" stroke="#FFFFFF" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="85" cy="85" r="8" fill="#FFFFFF" />
+</svg>
