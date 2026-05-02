@@ -7,6 +7,17 @@ import RenterDashboard from './components/RenterDashboard';
 import OwnerDashboard from './components/OwnerDashboard';
 import AdminDashboard from './components/AdminDashboard';
 
+// Protected route wrapper — checks token + role
+const ProtectedRoute = ({ children, requiredRole }) => {
+  const token = localStorage.getItem('token');
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+
+  if (!token) return <Navigate to="/login" replace />;
+  if (requiredRole && user.role !== requiredRole) return <Navigate to="/login" replace />;
+
+  return children;
+};
+
 function App() {
   return (
     <>
@@ -14,13 +25,12 @@ function App() {
       <BrowserRouter>
         <div className="min-h-screen bg-white">
           <Routes>
-            {/* Default route to login */}
             <Route path="/" element={<Navigate to="/login" replace />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
-            <Route path="/renter-dashboard" element={<RenterDashboard />} />
-            <Route path="/owner-dashboard" element={<OwnerDashboard />} />
-            <Route path="/admin-dashboard" element={<AdminDashboard />} />
+            <Route path="/renter-dashboard" element={<ProtectedRoute requiredRole="renter"><RenterDashboard /></ProtectedRoute>} />
+            <Route path="/owner-dashboard" element={<ProtectedRoute requiredRole="owner"><OwnerDashboard /></ProtectedRoute>} />
+            <Route path="/admin-dashboard" element={<ProtectedRoute requiredRole="admin"><AdminDashboard /></ProtectedRoute>} />
           </Routes>
         </div>
       </BrowserRouter>

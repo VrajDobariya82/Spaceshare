@@ -1,388 +1,276 @@
 import React, { useEffect, useState } from 'react';
 import {
-    Home,
-    LayoutDashboard,
-    Users,
-    Building,
-    CheckSquare,
-    CalendarDays,
-    CreditCard,
-    BarChart3,
-    Settings,
-    LogOut,
-    Search,
-    Bell,
-    ChevronDown,
-    Filter,
-    Download,
-    MoreVertical,
-    TrendingUp,
-    AlertTriangle,
-    Clock
+    Home, LayoutDashboard, Users, Building, CalendarDays,
+    LogOut, Search, Trash2, Loader2, MapPin, DollarSign,
+    Clock, CheckCircle2, XCircle, TrendingUp
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-hot-toast';
+
+const API = 'http://localhost:5000/api';
 
 const AdminDashboard = () => {
     const navigate = useNavigate();
-    const [user, setUser] = useState({ name: 'Alex Admin', role: 'Super Admin' });
+    const [activeTab, setActiveTab] = useState('dashboard');
+    const [users, setUsers] = useState([]);
+    const [spaces, setSpaces] = useState([]);
+    const [bookings, setBookings] = useState([]);
+    const [loading, setLoading] = useState(false);
+
+    const token = localStorage.getItem('token');
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
 
     useEffect(() => {
-        const token = localStorage.getItem('token');
-        if (!token) {
-            navigate('/login');
-        }
-    }, [navigate]);
+        if (!token) { navigate('/login'); return; }
+        loadDashboard();
+    }, []);
 
-    const handleLogout = () => {
-        localStorage.removeItem('token');
-        navigate('/login');
+    const loadDashboard = async () => {
+        setLoading(true);
+        try {
+            const headers = { Authorization: `Bearer ${token}` };
+            const [uRes, sRes, bRes] = await Promise.all([
+                fetch(`${API}/admin/users`, { headers }),
+                fetch(`${API}/admin/spaces`, { headers }),
+                fetch(`${API}/admin/bookings`, { headers })
+            ]);
+            if (uRes.ok) setUsers(await uRes.json());
+            if (sRes.ok) setSpaces(await sRes.json());
+            if (bRes.ok) setBookings(await bRes.json());
+        } catch (err) { console.error(err); }
+        finally { setLoading(false); }
     };
+
+    const handleDeleteUser = async (id) => {
+        if (!window.confirm('Delete this user?')) return;
+        try {
+            const res = await fetch(`${API}/admin/users/${id}`, {
+                method: 'DELETE', headers: { Authorization: `Bearer ${token}` }
+            });
+            if (!res.ok) { const d = await res.json(); throw new Error(d.message); }
+            setUsers(prev => prev.filter(u => u._id !== id));
+            toast.success('User deleted');
+        } catch (err) { toast.error(err.message); }
+    };
+
+    const handleDeleteSpace = async (id) => {
+        if (!window.confirm('Delete this space?')) return;
+        try {
+            const res = await fetch(`${API}/admin/spaces/${id}`, {
+                method: 'DELETE', headers: { Authorization: `Bearer ${token}` }
+            });
+            if (!res.ok) throw new Error('Failed');
+            setSpaces(prev => prev.filter(s => s._id !== id));
+            toast.success('Space deleted');
+        } catch (err) { toast.error(err.message); }
+    };
+
+    const handleLogout = () => { localStorage.removeItem('token'); localStorage.removeItem('user'); navigate('/login'); };
+
+    const roleBadge = (role) => {
+        const s = { renter: 'bg-blue-50 text-blue-600 border-blue-200', owner: 'bg-purple-50 text-purple-600 border-purple-200', admin: 'bg-gray-800 text-white border-gray-700' };
+        return <span className={`px-2 py-0.5 rounded-md text-[11px] font-bold border ${s[role]}`}>{role}</span>;
+    };
+
+    const statusBadge = (status) => {
+        const s = { pending: 'bg-amber-50 text-amber-600 border-amber-200', approved: 'bg-emerald-50 text-emerald-600 border-emerald-200', rejected: 'bg-red-50 text-red-600 border-red-200' };
+        return <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold border ${s[status]}`}>
+            {status === 'pending' ? <Clock className="w-3 h-3" /> : status === 'approved' ? <CheckCircle2 className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
+            {status}
+        </span>;
+    };
+
+    const initials = (name) => name ? name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : '??';
+    const colors = ['bg-blue-100 text-blue-600', 'bg-purple-100 text-purple-600', 'bg-amber-100 text-amber-600', 'bg-pink-100 text-pink-600', 'bg-emerald-100 text-emerald-600'];
 
     return (
         <div className="flex h-screen bg-[#F8FAFC] font-sans overflow-hidden">
             {/* Sidebar */}
             <aside className="w-[260px] bg-white border-r border-gray-100 flex flex-col justify-between shrink-0 h-full">
-                <div className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-none">
-                    {/* Logo Section */}
+                <div>
                     <div className="px-6 py-8 flex items-center gap-3">
-                        <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-sm">
-                            <Home className="w-5 h-5 text-white" />
-                        </div>
+                        <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-sm"><Home className="w-5 h-5 text-white" /></div>
                         <div>
                             <span className="text-[18px] font-bold text-gray-900 leading-none block tracking-tight">SpaceShare</span>
                             <span className="text-[10px] font-bold text-gray-400 tracking-wider mt-0.5 block">Admin Portal</span>
                         </div>
                     </div>
-
-                    {/* Navigation */}
                     <nav className="px-4 space-y-1">
-                        <div className="pt-2 pb-2">
-                            <div className="px-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Management</div>
-                        </div>
-                        <a href="#" className="flex items-center gap-3.5 px-4 py-3 bg-blue-50/70 text-blue-600 rounded-xl font-semibold text-[14px] transition-colors">
-                            <LayoutDashboard className="w-[18px] h-[18px]" />
-                            Dashboard
-                        </a>
-                        <a href="#" className="flex items-center gap-3.5 px-4 py-3 text-gray-500 hover:text-gray-900 hover:bg-gray-50 rounded-xl font-medium text-[14px] transition-colors">
-                            <Users className="w-[18px] h-[18px]" />
-                            Manage Users
-                        </a>
-                        <a href="#" className="flex items-center gap-3.5 px-4 py-3 text-gray-500 hover:text-gray-900 hover:bg-gray-50 rounded-xl font-medium text-[14px] transition-colors">
-                            <Building className="w-[18px] h-[18px]" />
-                            Space Listings
-                        </a>
-                        <a href="#" className="flex items-center gap-3.5 px-4 py-3 text-gray-500 hover:text-gray-900 hover:bg-gray-50 rounded-xl font-medium text-[14px] transition-colors relative">
-                            <CheckSquare className="w-[18px] h-[18px]" />
-                            Approve Listings
-                            <span className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 bg-red-100 text-red-600 flex items-center justify-center rounded-md text-[10px] font-bold">24</span>
-                        </a>
-                        <a href="#" className="flex items-center gap-3.5 px-4 py-3 text-gray-500 hover:text-gray-900 hover:bg-gray-50 rounded-xl font-medium text-[14px] transition-colors">
-                            <CalendarDays className="w-[18px] h-[18px]" />
-                            Bookings
-                        </a>
-                        <a href="#" className="flex items-center gap-3.5 px-4 py-3 text-gray-500 hover:text-gray-900 hover:bg-gray-50 rounded-xl font-medium text-[14px] transition-colors">
-                            <CreditCard className="w-[18px] h-[18px]" />
-                            Payments
-                        </a>
-                        <a href="#" className="flex items-center gap-3.5 px-4 py-3 text-gray-500 hover:text-gray-900 hover:bg-gray-50 rounded-xl font-medium text-[14px] transition-colors">
-                            <BarChart3 className="w-[18px] h-[18px]" />
-                            Analytics
-                        </a>
+                        <div className="px-4 pt-2 pb-2"><div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Management</div></div>
+                        {[
+                            { key: 'dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+                            { key: 'users', icon: Users, label: 'Manage Users' },
+                            { key: 'spaces', icon: Building, label: 'Space Listings' },
+                            { key: 'bookings', icon: CalendarDays, label: 'Bookings' }
+                        ].map(item => (
+                            <button key={item.key} onClick={() => setActiveTab(item.key)}
+                                className={`flex items-center gap-3.5 px-4 py-3 rounded-xl font-semibold text-[14px] transition-colors w-full ${activeTab === item.key ? 'bg-blue-50/70 text-blue-600' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'}`}>
+                                <item.icon className="w-[18px] h-[18px]" /> {item.label}
+                            </button>
+                        ))}
                     </nav>
                 </div>
-
-                {/* Bottom Settings & Logout */}
-                <div>
-                    <nav className="px-4 pb-2 space-y-1 border-t border-gray-100 pt-4 mt-2">
-                        <a href="#" className="flex items-center gap-3.5 px-4 py-3 text-gray-500 hover:text-gray-900 hover:bg-gray-50 rounded-xl font-medium text-[14px] transition-colors">
-                            <Settings className="w-[18px] h-[18px]" />
-                            Settings
-                        </a>
-                        <button onClick={handleLogout} className="flex items-center gap-3.5 px-4 py-3 text-gray-500 hover:text-gray-900 hover:bg-gray-50 rounded-xl font-medium text-[14px] transition-colors w-full">
-                            <LogOut className="w-[18px] h-[18px]" />
-                            Log Out
-                        </button>
-                    </nav>
-
-                    {/* User Profile Section Bottom */}
-                    <div className="p-4 border-t border-gray-100">
-                        <div className="flex items-center gap-3 bg-gray-50 p-3 rounded-xl hover:bg-gray-100 transition-colors group cursor-pointer">
-                            <img src="https://i.pravatar.cc/150?img=11" alt="User Avatar" className="w-10 h-10 rounded-full object-cover border border-gray-200" />
-                            <div className="overflow-hidden">
-                                <h4 className="text-[13px] font-bold text-gray-900 truncate">{user.name}</h4>
-                                <p className="text-[11px] text-gray-500 truncate">{user.role}</p>
-                            </div>
+                <div className="p-4 border-t border-gray-100">
+                    <button onClick={handleLogout} className="flex items-center gap-3.5 px-4 py-3 text-gray-500 hover:text-gray-900 hover:bg-gray-50 rounded-xl font-medium text-[14px] transition-colors w-full">
+                        <LogOut className="w-[18px] h-[18px]" /> Log Out
+                    </button>
+                    <div className="flex items-center gap-3 bg-gray-50 p-3 rounded-xl mt-2">
+                        <div className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center text-[13px] font-bold">{initials(user.name || 'Admin')}</div>
+                        <div className="overflow-hidden">
+                            <h4 className="text-[13px] font-bold text-gray-900 truncate">{user.name || 'Admin'}</h4>
+                            <p className="text-[11px] text-gray-500 truncate">{user.email || 'admin'}</p>
                         </div>
                     </div>
                 </div>
             </aside>
 
-            {/* Main Content */}
+            {/* Main */}
             <main className="flex-1 overflow-y-auto w-full">
-
-                {/* Top Navbar */}
-                <header className="bg-white border-b border-gray-100 h-20 px-8 flex items-center justify-between sticky top-0 z-10 w-full">
-                    <h2 className="text-[20px] font-bold text-gray-900 tracking-tight">Platform Overview</h2>
-                    <div className="flex items-center gap-4">
-                        <div className="relative">
-                            <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                            <input
-                                type="text"
-                                placeholder="Search users, listings..."
-                                className="pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-[13px] text-gray-900 placeholder:text-gray-500 outline-none w-[320px] focus:bg-white focus:border-blue-500 transition-all"
-                            />
-                        </div>
-                        <button className="w-9 h-9 flex items-center justify-center bg-gray-50 border border-gray-200 text-gray-600 rounded-lg relative hover:bg-gray-100 transition-colors">
-                            <Bell className="w-4 h-4" />
-                            <span className="absolute top-2 right-2.5 w-1.5 h-1.5 bg-red-500 rounded-full"></span>
-                        </button>
-                    </div>
-                </header>
-
                 <div className="p-8 max-w-[1400px] mx-auto">
-
-                    {/* Greeting Row */}
-                    <div className="mb-6">
-                        <p className="text-[14px] text-gray-500 font-medium">Here is your daily platform summary.</p>
-                    </div>
-
-                    {/* Stats Cards Row */}
-                    <div className="flex overflow-x-auto gap-5 mb-8 pb-2 scrollbar-none w-full">
-                        {/* Users */}
-                        <div className="bg-white p-6 rounded-[20px] shadow-sm border border-gray-100 shrink-0 w-[280px]">
-                            <div className="flex justify-between items-start mb-4">
-                                <div className="text-[13px] font-bold text-gray-500">Total Users</div>
-                                <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
-                                    <Users className="w-4 h-4" />
-                                </div>
-                            </div>
-                            <div className="text-[32px] font-bold text-gray-900 leading-none mb-3">14,205</div>
-                            <div className="flex items-center gap-2 text-[12px] font-medium">
-                                <span className="text-emerald-600 flex items-center gap-1"><TrendingUp className="w-3 h-3" /> 12%</span>
-                                <span className="text-gray-400">new this month</span>
-                            </div>
-                        </div>
-
-                        {/* Active Listings */}
-                        <div className="bg-white p-6 rounded-[20px] shadow-sm border border-gray-100 shrink-0 w-[280px]">
-                            <div className="flex justify-between items-start mb-4">
-                                <div className="text-[13px] font-bold text-gray-500">Active Listings</div>
-                                <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                                    <Building className="w-4 h-4" />
-                                </div>
-                            </div>
-                            <div className="text-[32px] font-bold text-gray-900 leading-none mb-3">2,845</div>
-                            <div className="flex items-center gap-2 text-[12px] font-medium">
-                                <span className="text-emerald-600 flex items-center gap-1"><TrendingUp className="w-3 h-3" /> 5.4%</span>
-                                <span className="text-gray-400">new this week</span>
-                            </div>
-                        </div>
-
-                        {/* Listing Requests */}
-                        <div className="bg-white p-6 rounded-[20px] shadow-sm border border-amber-200/50 shrink-0 w-[280px] relative overflow-hidden">
-                            <div className="absolute top-0 right-0 w-32 h-32 bg-amber-50 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none"></div>
-                            <div className="flex justify-between items-start mb-4 relative z-10">
-                                <div className="text-[13px] font-bold text-gray-500">Listing Requests</div>
-                                <div className="w-8 h-8 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center">
-                                    <CheckSquare className="w-4 h-4" />
-                                </div>
-                            </div>
-                            <div className="text-[32px] font-bold text-gray-900 leading-none mb-3 relative z-10">24</div>
-                            <div className="flex items-center gap-2 text-[12px] font-semibold text-amber-600 relative z-10">
-                                <AlertTriangle className="w-3.5 h-3.5" /> Action Required
-                            </div>
-                        </div>
-
-                        {/* Total Bookings */}
-                        <div className="bg-white p-6 rounded-[20px] shadow-sm border border-gray-100 shrink-0 w-[280px]">
-                            <div className="flex justify-between items-start mb-4">
-                                <div className="text-[13px] font-bold text-gray-500">Total Bookings</div>
-                                <div className="w-8 h-8 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center">
-                                    <CalendarDays className="w-4 h-4" />
-                                </div>
-                            </div>
-                            <div className="text-[32px] font-bold text-gray-900 leading-none mb-3">842</div>
-                            <div className="flex items-center gap-2 text-[12px] font-medium">
-                                <span className="text-emerald-600 flex items-center gap-1"><TrendingUp className="w-3 h-3" /> 4%</span>
-                                <span className="text-gray-400">vs last week</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
-                        {/* Middle Left: Analytics Chart Placeholder */}
-                        <div className="lg:col-span-2 bg-white rounded-[20px] p-6 shadow-sm border border-gray-100 flex flex-col h-[400px]">
-                            <div className="flex items-center justify-between mb-6">
-                                <h3 className="text-[16px] font-bold text-gray-900">Platform Analytics</h3>
-                                <button className="flex items-center gap-2 text-[12px] font-medium text-gray-600 border border-gray-200 px-3 py-1.5 rounded-lg hover:bg-gray-50 transition-colors">
-                                    Last 7 Days <ChevronDown className="w-3 h-3" />
-                                </button>
-                            </div>
-
-                            {/* Empty state / placeholder for chart */}
-                            <div className="flex-1 w-full bg-gray-50 rounded-xl border border-dashed border-gray-200 flex items-center justify-center relative">
-                                <p className="text-[13px] font-medium text-gray-400">Chart Visualization Area</p>
-
-                                <div className="absolute bottom-4 left-0 w-full flex justify-between px-8 text-[11px] text-gray-400 font-medium">
-                                    <span>Mon</span>
-                                    <span>Tue</span>
-                                    <span>Wed</span>
-                                    <span>Thu</span>
-                                    <span>Fri</span>
-                                    <span>Sat</span>
-                                    <span>Sun</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Middle Right: Recent Users */}
-                        <div className="bg-white rounded-[20px] p-6 shadow-sm border border-gray-100 flex flex-col h-[400px]">
-                            <div className="flex items-center justify-between mb-5">
-                                <h3 className="text-[16px] font-bold text-gray-900">Recent Users</h3>
-                                <a href="#" className="text-[12px] font-bold text-blue-600 hover:text-blue-700 transition-colors">View All</a>
-                            </div>
-
-                            <div className="space-y-4 flex-1 overflow-y-auto pr-2 scrollbar-none">
-                                {/* User 1 */}
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center text-[13px] font-bold shrink-0">
-                                            JD
+                    {loading ? (
+                        <div className="flex items-center justify-center py-20"><Loader2 className="w-8 h-8 text-blue-500 animate-spin" /></div>
+                    ) : activeTab === 'dashboard' ? (
+                        /* ==================== DASHBOARD ==================== */
+                        <>
+                            <h1 className="text-[28px] font-bold text-gray-900 tracking-tight mb-2">Platform Overview</h1>
+                            <p className="text-[14px] text-gray-500 mb-8">Real-time platform statistics.</p>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
+                                {[
+                                    { label: 'Total Users', value: users.length, icon: Users, color: 'bg-blue-50 text-blue-600' },
+                                    { label: 'Active Listings', value: spaces.length, icon: Building, color: 'bg-emerald-50 text-emerald-600' },
+                                    { label: 'Total Bookings', value: bookings.length, icon: CalendarDays, color: 'bg-purple-50 text-purple-600' },
+                                    { label: 'Pending Bookings', value: bookings.filter(b => b.status === 'pending').length, icon: Clock, color: 'bg-amber-50 text-amber-600' }
+                                ].map((s, i) => (
+                                    <div key={i} className="bg-white p-6 rounded-[20px] shadow-sm border border-gray-100">
+                                        <div className="flex justify-between items-start mb-4">
+                                            <div className="text-[13px] font-bold text-gray-500">{s.label}</div>
+                                            <div className={`w-8 h-8 rounded-lg ${s.color} flex items-center justify-center`}><s.icon className="w-4 h-4" /></div>
                                         </div>
-                                        <div>
-                                            <h4 className="text-[13.5px] font-bold text-gray-900 leading-tight">John Doe</h4>
-                                            <p className="text-[11px] text-gray-500 mt-0.5 leading-tight">john@example.com</p>
+                                        <div className="text-[32px] font-bold text-gray-900 leading-none">{s.value}</div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            {/* Recent Users */}
+                            <div className="bg-white rounded-[20px] p-6 shadow-sm border border-gray-100">
+                                <h3 className="text-[16px] font-bold text-gray-900 mb-5">Recent Users</h3>
+                                <div className="space-y-3">
+                                    {users.slice(0, 5).map((u, i) => (
+                                        <div key={u._id} className="flex items-center justify-between py-2">
+                                            <div className="flex items-center gap-3">
+                                                <div className={`w-10 h-10 rounded-full ${colors[i % colors.length]} flex items-center justify-center text-[13px] font-bold`}>{initials(u.name)}</div>
+                                                <div>
+                                                    <h4 className="text-[13.5px] font-bold text-gray-900">{u.name}</h4>
+                                                    <p className="text-[11px] text-gray-500">{u.email}</p>
+                                                </div>
+                                            </div>
+                                            {roleBadge(u.role)}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </>
+                    ) : activeTab === 'users' ? (
+                        /* ==================== USERS ==================== */
+                        <>
+                            <h1 className="text-[28px] font-bold text-gray-900 tracking-tight mb-6">Manage Users</h1>
+                            <div className="bg-white rounded-[20px] shadow-sm border border-gray-100 overflow-hidden">
+                                <div className="grid grid-cols-12 gap-4 py-3 px-6 bg-gray-50/50 text-[12px] font-bold text-gray-500 border-b border-gray-100">
+                                    <div className="col-span-4">User</div>
+                                    <div className="col-span-3">Email</div>
+                                    <div className="col-span-2">Role</div>
+                                    <div className="col-span-2">Joined</div>
+                                    <div className="col-span-1 text-right">Action</div>
+                                </div>
+                                {users.length === 0 ? (
+                                    <div className="p-12 text-center text-gray-400 text-[14px]">No users found</div>
+                                ) : users.map((u, i) => (
+                                    <div key={u._id} className="grid grid-cols-12 gap-4 py-4 px-6 items-center border-b border-gray-50 hover:bg-gray-50/30 transition-colors">
+                                        <div className="col-span-4 flex items-center gap-3">
+                                            <div className={`w-8 h-8 rounded-full ${colors[i % colors.length]} flex items-center justify-center text-[11px] font-bold shrink-0`}>{initials(u.name)}</div>
+                                            <span className="text-[13.5px] font-bold text-gray-900">{u.name}</span>
+                                        </div>
+                                        <div className="col-span-3 text-[13px] text-gray-600 truncate">{u.email}</div>
+                                        <div className="col-span-2">{roleBadge(u.role)}</div>
+                                        <div className="col-span-2 text-[12px] text-gray-500">{new Date(u.createdAt).toLocaleDateString()}</div>
+                                        <div className="col-span-1 flex justify-end">
+                                            <button onClick={() => handleDeleteUser(u._id)} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                                title={u._id === user.id ? "Can't delete yourself" : 'Delete user'} disabled={u._id === user.id}>
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
                                         </div>
                                     </div>
-                                    <span className="px-2 py-1 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-md text-[10px] font-bold">Active</span>
+                                ))}
+                            </div>
+                        </>
+                    ) : activeTab === 'spaces' ? (
+                        /* ==================== SPACES ==================== */
+                        <>
+                            <h1 className="text-[28px] font-bold text-gray-900 tracking-tight mb-6">All Space Listings</h1>
+                            {spaces.length === 0 ? (
+                                <div className="bg-white rounded-2xl p-12 border border-gray-100 shadow-sm text-center">
+                                    <Building className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+                                    <p className="text-[15px] text-gray-500">No spaces listed yet.</p>
                                 </div>
-
-                                {/* User 2 */}
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center text-[13px] font-bold shrink-0">
-                                            AS
+                            ) : (
+                                <div className="space-y-4">
+                                    {spaces.map(s => (
+                                        <div key={s._id} className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm flex items-center justify-between">
+                                            <div className="flex items-center gap-4">
+                                                {s.images?.length > 0 ? (
+                                                    <img src={s.images[0]} alt="" className="w-16 h-16 object-cover rounded-xl shrink-0" />
+                                                ) : (
+                                                    <div className="w-16 h-16 bg-gray-100 rounded-xl flex items-center justify-center shrink-0"><Building className="w-5 h-5 text-gray-300" /></div>
+                                                )}
+                                                <div>
+                                                    <h3 className="text-[15px] font-bold text-gray-900">{s.title}</h3>
+                                                    <div className="flex items-center gap-3 text-[12px] text-gray-500 mt-1">
+                                                        <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5" />{s.location}</span>
+                                                        <span>${s.price}/hr</span>
+                                                        <span className="bg-gray-100 px-1.5 py-0.5 rounded text-[10px] font-semibold">{s.type}</span>
+                                                    </div>
+                                                    <p className="text-[11px] text-gray-400 mt-1">Owner: {s.ownerId?.name || 'Unknown'}</p>
+                                                </div>
+                                            </div>
+                                            <button onClick={() => handleDeleteSpace(s._id)} className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
                                         </div>
-                                        <div>
-                                            <h4 className="text-[13.5px] font-bold text-gray-900 leading-tight">Alice Smith</h4>
-                                            <p className="text-[11px] text-gray-500 mt-0.5 leading-tight">alice.s@studio.com</p>
-                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </>
+                    ) : (
+                        /* ==================== BOOKINGS ==================== */
+                        <>
+                            <h1 className="text-[28px] font-bold text-gray-900 tracking-tight mb-6">All Bookings</h1>
+                            {bookings.length === 0 ? (
+                                <div className="bg-white rounded-2xl p-12 border border-gray-100 shadow-sm text-center">
+                                    <CalendarDays className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+                                    <p className="text-[15px] text-gray-500">No bookings yet.</p>
+                                </div>
+                            ) : (
+                                <div className="bg-white rounded-[20px] shadow-sm border border-gray-100 overflow-hidden">
+                                    <div className="grid grid-cols-12 gap-4 py-3 px-6 bg-gray-50/50 text-[12px] font-bold text-gray-500 border-b border-gray-100">
+                                        <div className="col-span-3">Space</div>
+                                        <div className="col-span-2">Renter</div>
+                                        <div className="col-span-3">Dates</div>
+                                        <div className="col-span-2">Status</div>
+                                        <div className="col-span-2">Booked On</div>
                                     </div>
-                                    <span className="px-2 py-1 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-md text-[10px] font-bold">Active</span>
-                                </div>
-
-                                {/* User 3 */}
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center text-[13px] font-bold shrink-0">
-                                            RJ
+                                    {bookings.map(b => (
+                                        <div key={b._id} className="grid grid-cols-12 gap-4 py-4 px-6 items-center border-b border-gray-50 hover:bg-gray-50/30 transition-colors">
+                                            <div className="col-span-3 text-[13px] font-bold text-gray-900">{b.spaceId?.title || 'Deleted'}</div>
+                                            <div className="col-span-2 text-[13px] text-gray-600">{b.userId?.name || 'Unknown'}</div>
+                                            <div className="col-span-3 text-[12px] text-gray-500">{new Date(b.startDate).toLocaleDateString()} — {new Date(b.endDate).toLocaleDateString()}</div>
+                                            <div className="col-span-2">{statusBadge(b.status)}</div>
+                                            <div className="col-span-2 text-[12px] text-gray-500">{new Date(b.createdAt).toLocaleDateString()}</div>
                                         </div>
-                                        <div>
-                                            <h4 className="text-[13.5px] font-bold text-gray-900 leading-tight">Robert Johnson</h4>
-                                            <p className="text-[11px] text-gray-500 mt-0.5 leading-tight">rob.j@techflow.io</p>
-                                        </div>
-                                    </div>
-                                    <span className="px-2 py-1 bg-gray-100 text-gray-600 border border-gray-200 rounded-md text-[10px] font-bold">Pending</span>
+                                    ))}
                                 </div>
-
-                                {/* User 4 */}
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-full bg-pink-50 text-pink-600 flex items-center justify-center text-[13px] font-bold shrink-0">
-                                            EM
-                                        </div>
-                                        <div>
-                                            <h4 className="text-[13.5px] font-bold text-gray-900 leading-tight">Emma Martinez</h4>
-                                            <p className="text-[11px] text-gray-500 mt-0.5 leading-tight">emma@creative.co</p>
-                                        </div>
-                                    </div>
-                                    <span className="px-2 py-1 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-md text-[10px] font-bold">Active</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Pending Listing Requests Table */}
-                    <div className="bg-white rounded-[20px] shadow-sm border border-gray-100 overflow-hidden mb-10 w-full">
-                        <div className="p-6 flex items-center justify-between border-b border-gray-100">
-                            <h3 className="text-[18px] font-bold text-gray-900">Pending Listing Requests</h3>
-                            <div className="flex items-center gap-3">
-                                <button className="flex items-center gap-2 px-3 py-1.5 border border-gray-200 rounded-lg text-[13px] font-medium text-gray-600 hover:bg-gray-50 transition-colors">
-                                    Filter <Filter className="w-3.5 h-3.5" />
-                                </button>
-                                <button className="flex items-center gap-2 px-3 py-1.5 border border-gray-200 rounded-lg text-[13px] font-medium text-gray-600 hover:bg-gray-50 transition-colors">
-                                    Export <Download className="w-3.5 h-3.5" />
-                                </button>
-                            </div>
-                        </div>
-
-                        <div className="w-full">
-                            {/* Table Header */}
-                            <div className="grid grid-cols-12 gap-4 py-3 px-6 bg-gray-50/50 text-[12px] font-bold text-gray-500 border-b border-gray-100">
-                                <div className="col-span-3">Space Title</div>
-                                <div className="col-span-2">Owner</div>
-                                <div className="col-span-2">Location</div>
-                                <div className="col-span-1 text-center">Price/Hr</div>
-                                <div className="col-span-2 text-center">Submitted</div>
-                                <div className="col-span-2 text-right">Actions</div>
-                            </div>
-
-                            {/* Row 1 */}
-                            <div className="grid grid-cols-12 gap-4 py-5 px-6 items-center hover:bg-gray-50/30 border-b border-gray-50 transition-colors">
-                                <div className="col-span-3">
-                                    <div className="text-[13.5px] font-bold text-gray-900 leading-tight">Industrial Photo Studio</div>
-                                    <div className="text-[11px] text-gray-500 font-medium">Studio Space</div>
-                                </div>
-                                <div className="col-span-2 flex items-center gap-2">
-                                    <div className="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-[9px] font-bold shrink-0">SJ</div>
-                                    <div className="text-[13px] font-medium text-gray-700">Sarah Jenkins</div>
-                                </div>
-                                <div className="col-span-2 text-[13px] font-medium text-gray-600">
-                                    Brooklyn, NY
-                                </div>
-                                <div className="col-span-1 text-center text-[13px] font-bold text-gray-900">
-                                    $150
-                                </div>
-                                <div className="col-span-2 flex items-center justify-center gap-1.5">
-                                    <span className="bg-amber-50 text-amber-600 border border-amber-100 text-[11px] font-bold px-2.5 py-1 rounded-md flex items-center gap-1 w-fit">
-                                        <Clock className="w-3 h-3" /> 2 hrs ago
-                                    </span>
-                                </div>
-                                <div className="col-span-2 flex justify-end gap-2">
-                                    <button className="px-3 py-1.5 border border-gray-200 text-gray-600 rounded-lg text-[12px] font-bold hover:bg-gray-50 transition-colors">Reject</button>
-                                    <button className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-[12px] font-bold hover:bg-blue-700 transition-colors">Approve</button>
-                                </div>
-                            </div>
-
-                            {/* Row 2 */}
-                            <div className="grid grid-cols-12 gap-4 py-5 px-6 items-center hover:bg-gray-50/30 transition-colors">
-                                <div className="col-span-3">
-                                    <div className="text-[13.5px] font-bold text-gray-900 leading-tight">Downtown Boardroom</div>
-                                    <div className="text-[11px] text-gray-500 font-medium">Meeting Room</div>
-                                </div>
-                                <div className="col-span-2 flex items-center gap-2">
-                                    <div className="w-6 h-6 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-[9px] font-bold shrink-0">TF</div>
-                                    <div className="text-[13px] font-medium text-gray-700">TechFlow Inc.</div>
-                                </div>
-                                <div className="col-span-2 text-[13px] font-medium text-gray-600">
-                                    Austin, TX
-                                </div>
-                                <div className="col-span-1 text-center text-[13px] font-bold text-gray-900">
-                                    $75
-                                </div>
-                                <div className="col-span-2 flex items-center justify-center gap-1.5">
-                                    <span className="bg-amber-50 text-amber-600 border border-amber-100 text-[11px] font-bold px-2.5 py-1 rounded-md flex items-center gap-1 w-fit">
-                                        <Clock className="w-3 h-3" /> 5 hrs ago
-                                    </span>
-                                </div>
-                                <div className="col-span-2 flex justify-end gap-2">
-                                    <button className="px-3 py-1.5 border border-gray-200 text-gray-600 rounded-lg text-[12px] font-bold hover:bg-gray-50 transition-colors">Reject</button>
-                                    <button className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-[12px] font-bold hover:bg-blue-700 transition-colors">Approve</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
+                            )}
+                        </>
+                    )}
                 </div>
             </main>
         </div>

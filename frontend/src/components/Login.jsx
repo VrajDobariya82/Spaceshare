@@ -32,6 +32,7 @@ const Login = () => {
 
             console.log("Login successful", data);
             localStorage.setItem('token', data.token);
+            localStorage.setItem('user', JSON.stringify(data.user));
             toast.success("Login successful! Welcome back.");
 
             // Redirect based on role

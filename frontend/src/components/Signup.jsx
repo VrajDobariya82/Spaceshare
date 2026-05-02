@@ -41,6 +41,7 @@ const Signup = () => {
             // Successfully registered! You would typically save the token here
             console.log("Registration successful", data);
             localStorage.setItem('token', data.token);
+            localStorage.setItem('user', JSON.stringify(data.user));
             toast.success("Registration successful! You can now access the dashboard.");
 
             // Redirect based on role
