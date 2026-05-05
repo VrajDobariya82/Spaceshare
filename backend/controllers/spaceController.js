@@ -108,4 +108,34 @@ const deleteSpace = async (req, res, next) => {
     }
 };
 
-module.exports = { createSpace, getSpaces, getMySpaces, deleteSpace };
+// @desc    Update a space (owner or admin)
+// @route   PUT /api/spaces/:id
+const updateSpace = async (req, res, next) => {
+    try {
+        const { title, location, price, description, type, availability } = req.body;
+        
+        let space = await Space.findById(req.params.id);
+        if (!space) {
+            return res.status(404).json({ message: 'Space not found' });
+        }
+
+        // Only the owner or an admin can update
+        if (space.ownerId.toString() !== req.user.id && req.user.role !== 'admin') {
+            return res.status(403).json({ message: 'Not authorized to update this space' });
+        }
+
+        if (title) space.title = title;
+        if (location) space.location = location;
+        if (price) space.price = Number(price);
+        if (description !== undefined) space.description = description;
+        if (type) space.type = type;
+        if (availability !== undefined) space.availability = availability;
+
+        const updated = await space.save();
+        res.json(updated);
+    } catch (err) {
+        next(err);
+    }
+};
+
+module.exports = { createSpace, getSpaces, getMySpaces, deleteSpace, updateSpace };

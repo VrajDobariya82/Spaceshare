@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { auth, isOwner } = require('../middleware/auth');
 
-const { createSpace, getSpaces, getMySpaces, deleteSpace } = require('../controllers/spaceController');
+const { createSpace, getSpaces, getMySpaces, deleteSpace, updateSpace } = require('../controllers/spaceController');
 
 // @route  GET /api/spaces
 // @desc   Get all spaces with filtering & pagination
@@ -23,5 +23,10 @@ router.post('/', auth, isOwner, createSpace);
 // @desc   Delete a space
 // @access Private (owner of space or admin)
 router.delete('/:id', auth, deleteSpace);
+
+// @route  PUT /api/spaces/:id
+// @desc   Update a space
+// @access Private (owner or admin)
+router.put('/:id', auth, updateSpace);
 
 module.exports = router;

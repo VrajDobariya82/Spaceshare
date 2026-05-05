@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
+const { sendWelcomeEmail } = require('../utils/email');
 
 // @route POST /api/auth/register
 // @desc Register user
@@ -47,6 +48,8 @@ router.post('/register', async (req, res) => {
             { expiresIn: '1h' },
             (err, token) => {
                 if (err) throw err;
+                // Send welcome email (non-blocking)
+                sendWelcomeEmail(savedUser).catch(e => console.error('Welcome email failed:', e));
                 res.status(201).json({
                     token,
                     user: {
